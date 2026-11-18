@@ -94,7 +94,7 @@
   function load(){ try{ recettes = JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ recettes = []; } }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(recettes)); }catch(e){ alert("Sauvegarde impossible : " + e.message); } syncSoon(); }
   const live = () => recettes.filter(x => !x.deleted);
-  const SYNC_URL = "https://recipes-book.vincentdhellemmes.workers.dev/";
+  const SYNC_URL = "https://recipes-book.vincentdhellemmes.workers.dev";
   function cfg(){ try{ return { url: SYNC_URL, token:(localStorage.getItem("syncToken") || "").trim() }; }catch(e){ return { url: SYNC_URL, token:"" }; } }
   function setToken(token){ try{ localStorage.setItem("syncToken", token.trim()); }catch(e){} }
   const sig = a => a.map(x => x.id + ":" + (x.updatedAt || 0)).sort().join("|");
