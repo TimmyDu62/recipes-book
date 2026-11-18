@@ -73,7 +73,7 @@
 
 <div class="toolbar">
   <input id="f-search" type="text" placeholder="Titre ou ingrédient…" style="min-width:200px;">
-  <select id="f-type"><option value="">Tous les types</option><option value="entrée">Entrée</option><option value="plat">Plat</option><option value="dessert">Dessert</option></select>
+  <select id="f-type"><option value="">Tous les types</option><option value="entrée">Entrée</option><option value="plat">Plat</option><option value="dessert">Dessert</option><option value="sauces">Sauces</option><option value="autres">Autres</option></select>
   <select id="f-diff"><option value="">Toute difficulté</option><option value="facile">Facile</option><option value="moyen">Moyen</option><option value="difficile">Difficile</option></select>
   <select id="f-temp"><option value="">Chaud / froid</option><option value="chaud">Chaud</option><option value="froid">Froid</option></select>
   <label><input type="checkbox" id="f-veg"> Végé uniquement</label>
@@ -214,7 +214,7 @@
       '<h2>' + (isEdit ? "Modifier la recette" : "Nouvelle recette") + '</h2>' +
       (draft ? '<p class="hint">Importée : vérifiez les champs, et choisissez le type, la difficulté et chaud / froid.</p>' : "") +
       '<div class="field"><label class="l">Titre</label><input type="text" id="x-titre" value="' + esc(r.titre) + '"></div>' +
-      '<div class="row"><div class="field"><label class="l">Type</label>' + sel("x-type", r.type, [["entrée","Entrée"],["plat","Plat"],["dessert","Dessert"]], true) + '</div>' +
+      '<div class="row"><div class="field"><label class="l">Type</label>' + sel("x-type", r.type, [["entrée","Entrée"],["plat","Plat"],["dessert","Dessert"],["sauces","Sauces"],["autres","Autres"]], true) + '</div>' +
       '<div class="field"><label class="l">Difficulté</label>' + sel("x-diff", r.difficulte, [["facile","Facile"],["moyen","Moyen"],["difficile","Difficile"]], true) + '</div></div>' +
       '<div class="row"><div class="field"><label class="l">Chaud / froid</label>' + sel("x-temp", r.temperature, [["chaud","Chaud"],["froid","Froid"]]) + '</div>' +
       '<div class="field" style="display:flex;align-items:flex-end;"><label class="check" style="margin-bottom:8px;"><input type="checkbox" id="x-veg"' + (r.vegetarien ? " checked" : "") + '> Végétarien</label></div></div>' +
