@@ -1,5 +1,5 @@
 // Cloudflare Worker — API de stockage du carnet de recettes + proxy de récupération de pages.
-// Bindings requis : KV namespace "RECETTES" ; secret "TOKEN" ; variable optionnelle "ALLOWED_ORIGIN"
+// Bindings requis : KV namespace "RECIPES" (ou "RECETTES") ; secret "TOKEN" ; variable optionnelle "ALLOWED_ORIGIN"
 // (ex. https://ton-compte.github.io — origine seule, sans chemin).
 
 export default {
@@ -17,14 +17,15 @@ export default {
       if (request.method === "OPTIONS") return reply(null, 204);
       if (!env.TOKEN) return reply("Config: secret TOKEN absent", 500);
       if (request.headers.get("X-Token") !== env.TOKEN) return reply("Unauthorized", 401);
-      if (!env.RECETTES) return reply("Config: binding KV RECETTES absent", 500);
+      const KV = env.RECIPES || env.RECETTES;
+      if (!KV) return reply("Config: binding KV (RECIPES ou RECETTES) absent", 500);
 
       const url = new URL(request.url);
 
       // Lecture / écriture de l'ensemble des recettes
       if (url.pathname === "/data") {
         if (request.method === "GET") {
-          const v = await env.RECETTES.get("recettes");
+          const v = await KV.get("recettes");
           return reply(v || "[]", 200, { "Content-Type": "application/json" });
         }
         if (request.method === "PUT") {
@@ -34,7 +35,7 @@ export default {
           } catch {
             return reply("Bad JSON", 400);
           }
-          await env.RECETTES.put("recettes", body);
+          await KV.put("recettes", body);
           return reply("ok");
         }
       }
