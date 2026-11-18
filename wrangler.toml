@@ -1,0 +1,10 @@
+name = "recipes-book"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+[vars]
+ALLOWED_ORIGIN = "https://timmydu62.github.io"
+
+[[kv_namespaces]]
+binding = "RECIPES"
+id = "93a51b5cb3234022822103c3c676f8d0"
