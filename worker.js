@@ -13,45 +13,51 @@ export default {
     const reply = (body, status = 200, extra = {}) =>
       new Response(body, { status, headers: { ...cors, ...extra } });
 
-    if (request.method === "OPTIONS") return reply(null, 204);
-    if (!env.TOKEN || request.headers.get("X-Token") !== env.TOKEN) return reply("Unauthorized", 401);
+    try {
+      if (request.method === "OPTIONS") return reply(null, 204);
+      if (!env.TOKEN) return reply("Config: secret TOKEN absent", 500);
+      if (request.headers.get("X-Token") !== env.TOKEN) return reply("Unauthorized", 401);
+      if (!env.RECETTES) return reply("Config: binding KV RECETTES absent", 500);
 
-    const url = new URL(request.url);
+      const url = new URL(request.url);
 
-    // Lecture / écriture de l'ensemble des recettes
-    if (url.pathname === "/data") {
-      if (request.method === "GET") {
-        const v = await env.RECETTES.get("recettes");
-        return reply(v || "[]", 200, { "Content-Type": "application/json" });
-      }
-      if (request.method === "PUT") {
-        const body = await request.text();
-        try {
-          if (!Array.isArray(JSON.parse(body))) throw new Error("not array");
-        } catch {
-          return reply("Bad JSON", 400);
+      // Lecture / écriture de l'ensemble des recettes
+      if (url.pathname === "/data") {
+        if (request.method === "GET") {
+          const v = await env.RECETTES.get("recettes");
+          return reply(v || "[]", 200, { "Content-Type": "application/json" });
         }
-        await env.RECETTES.put("recettes", body);
-        return reply("ok");
+        if (request.method === "PUT") {
+          const body = await request.text();
+          try {
+            if (!Array.isArray(JSON.parse(body))) throw new Error("not array");
+          } catch {
+            return reply("Bad JSON", 400);
+          }
+          await env.RECETTES.put("recettes", body);
+          return reply("ok");
+        }
       }
-    }
 
-    // Proxy : récupère le HTML d'une page de recette
-    if (url.pathname === "/fetch" && request.method === "GET") {
-      let target;
-      try {
-        target = new URL(url.searchParams.get("url"));
-      } catch {
-        return reply("Bad URL", 400);
+      // Proxy : récupère le HTML d'une page de recette
+      if (url.pathname === "/fetch" && request.method === "GET") {
+        let target;
+        try {
+          target = new URL(url.searchParams.get("url"));
+        } catch {
+          return reply("Bad URL", 400);
+        }
+        if (!/^https?:$/.test(target.protocol)) return reply("Bad protocol", 400);
+        const r = await fetch(target.toString(), {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; CarnetRecettes/1.0)", "Accept": "text/html" },
+          redirect: "follow",
+        });
+        return reply(await r.text(), r.status, { "Content-Type": "text/html; charset=utf-8" });
       }
-      if (!/^https?:$/.test(target.protocol)) return reply("Bad protocol", 400);
-      const r = await fetch(target.toString(), {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; CarnetRecettes/1.0)", "Accept": "text/html" },
-        redirect: "follow",
-      });
-      return reply(await r.text(), r.status, { "Content-Type": "text/html; charset=utf-8" });
-    }
 
-    return reply("Not found", 404);
+      return reply("Not found", 404);
+    } catch (e) {
+      return reply("Worker error: " + (e && e.message ? e.message : e), 500);
+    }
   },
 };
