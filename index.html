@@ -92,8 +92,9 @@
   function load(){ try{ recettes = JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ recettes = []; } }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(recettes)); }catch(e){ alert("Sauvegarde impossible : " + e.message); } syncSoon(); }
   const live = () => recettes.filter(x => !x.deleted);
-  function cfg(){ try{ return { url:(localStorage.getItem("syncUrl") || "").trim().replace(/\/+$/, ""), token:(localStorage.getItem("syncToken") || "").trim() }; }catch(e){ return { url:"", token:"" }; } }
-  function setCfg(url, token){ try{ localStorage.setItem("syncUrl", url.trim()); localStorage.setItem("syncToken", token.trim()); }catch(e){} }
+  const SYNC_URL = "https://recipes-book.vincentdhellemmes.workers.dev";
+  function cfg(){ try{ return { url: SYNC_URL, token:(localStorage.getItem("syncToken") || "").trim() }; }catch(e){ return { url: SYNC_URL, token:"" }; } }
+  function setToken(token){ try{ localStorage.setItem("syncToken", token.trim()); }catch(e){} }
   const sig = a => a.map(x => x.id + ":" + (x.updatedAt || 0)).sort().join("|");
   function merge(a, b){ const m = new Map(); a.concat(b).forEach(x => { const p = m.get(x.id); if(!p || (x.updatedAt || 0) > (p.updatedAt || 0)) m.set(x.id, x); }); return Array.from(m.values()); }
   function setStatus(t, err){ const s = document.getElementById("sync-status"); if(s){ s.textContent = t; s.className = "sync" + (err ? " err" : ""); } }
@@ -105,14 +106,14 @@
     syncing = true; setStatus("Synchronisation…");
     try{
       const res = await fetch(c.url + "/data", { headers: { "X-Token": c.token } });
-      if(!res.ok) throw new Error("HTTP " + res.status);
+      if(!res.ok) throw new Error("HTTP " + res.status + " — " + (await res.text()).slice(0, 200));
       const remoteRaw = await res.json();
       const remote = Array.isArray(remoteRaw) ? remoteRaw : [];
       const merged = merge(recettes, remote);
       recettes = merged; localStorage.setItem(KEY, JSON.stringify(recettes));
       if(sig(merged) !== sig(remote)){
         const put = await fetch(c.url + "/data", { method:"PUT", headers:{ "X-Token": c.token, "Content-Type":"application/json" }, body: JSON.stringify(merged) });
-        if(!put.ok) throw new Error("HTTP " + put.status);
+        if(!put.ok) throw new Error("HTTP " + put.status + " — " + (await put.text()).slice(0, 200));
       }
       setStatus("Synchronisé à " + new Date().toLocaleTimeString());
       render();
@@ -291,7 +292,7 @@
         const res = (c.url && c.token)
           ? await fetch(c.url + "/fetch?url=" + encodeURIComponent(url), { headers: { "X-Token": c.token } })
           : await fetch(proxy + encodeURIComponent(url));
-        if(!res.ok) throw new Error("HTTP " + res.status);
+        if(!res.ok) throw new Error("HTTP " + res.status + " — " + (await res.text()).slice(0, 200));
         const r = recipeFromHtml(await res.text());
         if(!r){ msg("Page récupérée, mais aucun balisage schema.org/Recipe trouvé. Essayez le bookmarklet ou le collage.", true); return; }
         done(r, url);
@@ -309,8 +310,7 @@
 
   /* ---------- Sauvegarde / restauration ---------- */
   function openBackup(){
-    const o = overlay('<h2>Synchronisation</h2><p class="hint">Renseignez l\'URL de votre Worker Cloudflare et votre jeton pour retrouver vos recettes sur tous vos appareils. Sans cela, elles restent dans ce navigateur.</p>' +
-      '<div class="field"><label class="l">URL du Worker</label><input type="text" id="s-url" placeholder="https://carnet-recettes.xxx.workers.dev" value="' + esc(cfg().url) + '"></div>' +
+    const o = overlay('<h2>Synchronisation</h2><p class="hint">Entrez votre jeton pour retrouver vos recettes sur tous vos appareils. Sans cela, elles restent dans ce navigateur.</p>' +
       '<div class="field"><label class="l">Jeton</label><input type="text" id="s-token" value="' + esc(cfg().token) + '"></div>' +
       '<div class="actions" style="justify-content:flex-start;margin-top:0;"><button class="btn btn-primary" id="s-sync">Enregistrer et synchroniser</button></div><div class="sync" id="sync-status"></div><hr>' +
       '<h2 style="font-size:1.1rem;">Fichier JSON</h2><p class="hint">Export / import manuel, en complément.</p>' +
@@ -319,7 +319,7 @@
       '<input type="file" id="s-file" accept="application/json" style="display:none;"><div class="msg" id="s-msg"></div>' +
       '<div class="actions"><button class="btn btn-ghost" id="s-close">Fermer</button></div>');
     $("#s-close", o).onclick = () => o.remove();
-    $("#s-sync", o).onclick = () => { setCfg($("#s-url", o).value, $("#s-token", o).value); sync(); };
+    $("#s-sync", o).onclick = () => { setToken($("#s-token", o).value); sync(); };
     $("#s-exp", o).onclick = () => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([JSON.stringify(live(), null, 2)], { type:"application/json" }));

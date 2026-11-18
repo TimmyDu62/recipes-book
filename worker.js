@@ -1,5 +1,5 @@
 // Cloudflare Worker — API de stockage du carnet de recettes + proxy de récupération de pages.
-// Bindings requis : KV namespace "RECIPES" (ou "RECETTES") ; secret "TOKEN" ; variable optionnelle "ALLOWED_ORIGIN"
+// Bindings requis : KV namespace "RECIPES" ; secret "TOKEN" ; variable optionnelle "ALLOWED_ORIGIN"
 // (ex. https://ton-compte.github.io — origine seule, sans chemin).
 
 export default {
@@ -17,8 +17,8 @@ export default {
       if (request.method === "OPTIONS") return reply(null, 204);
       if (!env.TOKEN) return reply("Config: secret TOKEN absent", 500);
       if (request.headers.get("X-Token") !== env.TOKEN) return reply("Unauthorized", 401);
-      const KV = env.RECIPES || env.RECETTES;
-      if (!KV) return reply("Config: binding KV (RECIPES ou RECETTES) absent", 500);
+      const KV = env.RECIPES;
+      if (!KV) return reply("Config: binding KV RECIPES absent", 500);
 
       const url = new URL(request.url);
 
