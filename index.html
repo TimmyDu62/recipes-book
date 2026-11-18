@@ -59,6 +59,7 @@
   .bm{ display:inline-block; background:var(--mustard); color:#fff; padding:7px 12px; border-radius:6px; text-decoration:none; font-family:"Inter",sans-serif; font-size:.85rem; font-weight:600; }
   .sync{ font-family:"Inter",sans-serif; font-size:.8rem; color:var(--ink-soft); margin-top:8px; min-height:1em; }
   .sync.err{ color:var(--rust); }
+  .btn:disabled{ opacity:.5; cursor:default; }
   hr{ border:none; border-top:1px solid var(--line); margin:18px 0; }
   a{ color:var(--teal); }
 </style>
@@ -79,6 +80,7 @@
   <button class="btn btn-ghost" id="b-import">Importer depuis le web</button>
   <button class="btn btn-ghost" id="b-backup">Synchro / sauvegarde</button>
 </div>
+<div class="sync" id="sync-main" style="text-align:center; margin:-10px 0 12px;"></div>
 <div class="count" id="count"></div>
 <div class="grid" id="grid"></div>
 
@@ -92,12 +94,12 @@
   function load(){ try{ recettes = JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ recettes = []; } }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(recettes)); }catch(e){ alert("Sauvegarde impossible : " + e.message); } syncSoon(); }
   const live = () => recettes.filter(x => !x.deleted);
-  const SYNC_URL = "https://recipes-book.vincentdhellemmes.workers.dev";
+  const SYNC_URL = "https://myrecipes.timmy.workers.dev";
   function cfg(){ try{ return { url: SYNC_URL, token:(localStorage.getItem("syncToken") || "").trim() }; }catch(e){ return { url: SYNC_URL, token:"" }; } }
   function setToken(token){ try{ localStorage.setItem("syncToken", token.trim()); }catch(e){} }
   const sig = a => a.map(x => x.id + ":" + (x.updatedAt || 0)).sort().join("|");
   function merge(a, b){ const m = new Map(); a.concat(b).forEach(x => { const p = m.get(x.id); if(!p || (x.updatedAt || 0) > (p.updatedAt || 0)) m.set(x.id, x); }); return Array.from(m.values()); }
-  function setStatus(t, err){ const s = document.getElementById("sync-status"); if(s){ s.textContent = t; s.className = "sync" + (err ? " err" : ""); } }
+  function setStatus(t, err){ ["sync-status", "sync-main"].forEach(id => { const s = document.getElementById(id); if(s){ s.textContent = t; s.className = "sync" + (err ? " err" : ""); } }); }
   let syncing = false, again = false, timer = null;
   function syncSoon(){ clearTimeout(timer); timer = setTimeout(sync, 800); }
   async function sync(){
@@ -118,7 +120,7 @@
       setStatus("Synchronisé à " + new Date().toLocaleTimeString());
       render();
     }catch(e){ setStatus("Synchro échouée : " + e.message, true); }
-    finally{ syncing = false; if(again){ again = false; syncSoon(); } }
+    finally{ syncing = false; const b = document.getElementById("b-add"); if(b) b.disabled = false; if(again){ again = false; syncSoon(); } }
   }
   function getProxy(){ try{ return localStorage.getItem(PROXY_KEY) || DEFAULT_PROXY; }catch(e){ return DEFAULT_PROXY; } }
   function setProxy(v){ try{ localStorage.setItem(PROXY_KEY, v); }catch(e){} }
@@ -348,7 +350,9 @@
   $("#b-backup").onclick = openBackup;
   ["#f-search","#f-type","#f-diff","#f-temp","#f-veg"].forEach(s => { $(s).addEventListener("input", render); $(s).addEventListener("change", render); });
 
-  load(); render(); sync();
+  load(); render();
+  if(cfg().token){ $("#b-add").disabled = true; sync(); }
+  else setStatus("Synchro non configurée : les recettes restent dans ce navigateur uniquement.", true);
   window.addEventListener("focus", sync);
 
   // Arrivée depuis le bookmarklet
